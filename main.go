@@ -1,39 +1,41 @@
 package main
 
 import (
-	"bufio"
+	"database/sql"
 	"fmt"
-	"os"
-	"strconv"
-	"strings"
+
+	_ "github.com/go-sql-driver/mysql"
+	"gopkg.in/gorp.v2"
 )
 
-var scanner = bufio.NewScanner(os.Stdin)
+// var scanner = bufio.NewScanner(os.Stdin)
 
-func nextLine() string {
-	scanner.Scan()
-	return scanner.Text()
+type User struct {
+	Id   int    `db:"id"`
+	Name string `db:"name"`
 }
 
 func main() {
-	inText := nextLine()
-	inputs := strings.Split(inText, " ")
+	db, err := sql.Open("mysql", "kohei:kouheisano@tcp(localhost:3306)/test")
+	if err != nil {
+		fmt.Println("error in Open = ", err)
+	}
+	defer db.Close()
 
-	price, _ := strconv.Atoi(inputs[0])
-	rate, _ := strconv.ParseFloat(inputs[1], 10)
-	rate /= 100
+	dbmap := &gorp.DbMap{Db: db, Dialect: gorp.MySQLDialect{}}
+	defer dbmap.Db.Close()
 
-	totalPay := 0
+	count, err := dbmap.SelectInt("select count(*) from users")
+	if err != nil {
+		fmt.Println("error in SelectInt = ", err)
+	}
+	fmt.Println("count = ", count)
 
-	for {
-		totalPay += price
-		price = int(float64(price) * (1 - rate))
-
-		if price < 1 {
-			break
-		}
+	users := []User{}
+	_, err = dbmap.Select(&users, "select * from users")
+	if err != nil {
+		fmt.Println("error in Selct = ", err)
 	}
 
-	fmt.Println(totalPay)
-
+	fmt.Println("users = ", users)
 }
